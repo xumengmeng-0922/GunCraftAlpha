@@ -1,0 +1,21 @@
+# 构建产物
+dist/
+**/target/
+launcher/target/launcher-build/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Java / 日志
+*.class
+*.log
+hs_err_pid*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 本地工具缓存
+.tools/

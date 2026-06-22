@@ -1,0 +1,2 @@
+# 可选备用：当内嵌 JSON 未写 remoteManifestUrl 且未写 githubRepo 时，在此填一行 Raw 清单 HTTPS 地址。
+# 已配置 githubRepo 时无需填写，启动器会自动推导 Raw 地址。
