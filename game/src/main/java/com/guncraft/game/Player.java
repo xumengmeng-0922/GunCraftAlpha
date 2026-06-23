@@ -51,6 +51,12 @@ public class Player {
             crouching = pressed;
     }
 
+    /** 暂停菜单等场景下松开所有按键，避免角色继续移动。 */
+    public void releaseAllKeys() {
+        java.util.Arrays.fill(keys, false);
+        crouching = false;
+    }
+
     public void update(float delta, World world) {
         float moveSpeed = MOVE_SPEED * delta;
         if (crouching) moveSpeed *= 0.5f;

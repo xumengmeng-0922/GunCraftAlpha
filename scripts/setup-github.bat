@@ -88,6 +88,6 @@ if errorlevel 1 (
 echo.
 echo Push OK. Next steps:
 echo   1. Run scripts\package-game-zip.bat
-echo   2. GitHub Releases: tag game-alpha-1.3 + upload zip
+echo   2. GitHub Releases: tag game-alpha-1.4 + upload zip
 echo   3. See docs\GitHub发布指南.md
 exit /b 0

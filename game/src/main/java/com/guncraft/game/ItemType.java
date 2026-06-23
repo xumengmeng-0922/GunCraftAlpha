@@ -15,7 +15,7 @@ public enum ItemType {
     }
 
     public String getDisplayName() {
-        return displayName;
+        return Lang.itemName(this);
     }
 
     public boolean isBlock() {

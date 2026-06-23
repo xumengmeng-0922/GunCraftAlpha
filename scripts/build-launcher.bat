@@ -175,15 +175,29 @@ if errorlevel 1 (
 echo [6/7] jpackage...
 set "JPDEST=%ROOT%\dist"
 set "JPAPP=%JPDEST%\GunCraftLauncher"
-if exist "%JPAPP%" rmdir /s /q "%JPAPP%"
+echo      Stopping old launcher if running...
+taskkill /IM GunCraftLauncher.exe /F >nul 2>&1
+timeout /t 1 /nobreak >nul
+if exist "%JPAPP%" (
+    rmdir /s /q "%JPAPP%" 2>nul
+    if exist "%JPAPP%" (
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Sleep -Seconds 1; Remove-Item -LiteralPath '%JPAPP%' -Recurse -Force -ErrorAction SilentlyContinue"
+    )
+    if exist "%JPAPP%" (
+        echo [ERR] Cannot remove: %JPAPP%
+        echo      Close GunCraft Launcher, game, and any File Explorer window in that folder, then retry.
+        echo      Or run fat jar: java -jar "%OUT%\guncraft-launcher-fat.jar"
+        if not defined NOPAUSE pause
+        exit /b 1
+    )
+)
 if not exist "%JPDEST%" mkdir "%JPDEST%"
 set "JPIN=%OUT%\jpackage-input"
 if exist "%JPIN%" rmdir /s /q "%JPIN%"
 mkdir "%JPIN%"
 copy /y "%OUT%\guncraft-launcher-fat.jar" "%JPIN%\" >nul
 
-REM No --overwrite: not supported on some JDK locales; JPAPP folder removed above
-"%JPACKAGE%" --type app-image --input "%JPIN%" --main-jar guncraft-launcher-fat.jar --main-class com.guncraft.launcher.Launcher --name GunCraftLauncher --dest "%JPDEST%" --app-version 1.3.0 --vendor GunCraft --copyright GunCraft --description "GunCraft Launcher" --java-options "-Dfile.encoding=UTF-8"
+"%JPACKAGE%" --type app-image --input "%JPIN%" --main-jar guncraft-launcher-fat.jar --main-class com.guncraft.launcher.Launcher --name GunCraftLauncher --dest "%JPDEST%" --app-version 1.4.0 --vendor GunCraft --copyright GunCraft --description "GunCraft Launcher" --java-options "-Dfile.encoding=UTF-8"
 if errorlevel 1 (
     echo [ERR] jpackage failed. Try: java -jar "%OUT%\guncraft-launcher-fat.jar"
     if not defined NOPAUSE pause

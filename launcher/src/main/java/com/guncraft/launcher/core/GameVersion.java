@@ -16,6 +16,14 @@ public class GameVersion {
     /** Releases 上附件文件名，例如 {@code guncraft-game-alpha-1.3.zip} */
     public String zipAssetName = "";
     public String jarName = "";
+    /** GMT+8 发布日期，格式 yyyy-MM-dd */
+    public String releaseDate = "";
+
+    /** 带时区说明的发布日期，无则返回空串。 */
+    public String releaseDateLabel() {
+        if (releaseDate == null || releaseDate.isBlank()) return "";
+        return releaseDate.trim() + " (GMT+8)";
+    }
 
     public String resolvedJarName() {
         if (jarName != null && !jarName.isBlank()) return jarName.trim();

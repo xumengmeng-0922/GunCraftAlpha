@@ -19,9 +19,22 @@ import static org.lwjgl.system.MemoryUtil.*;
 public class Game {
 
     private static final int MAP_SIZE = 32;
-    private static final int WIDTH = 1280;
-    private static final int HEIGHT = 720;
-    private static final String TITLE = "GunCraft Alpha 1.3 - WASD 空格 G生物 E背包 1-9/滚轮 左键射击/破坏 右键泥土";
+    /** 默认 1080p；窗口可拖动缩放，实际渲染随帧缓冲尺寸变化。 */
+    private static final int DEFAULT_WIDTH = 1920;
+    private static final int DEFAULT_HEIGHT = 1080;
+    private static final int MIN_WIDTH = 960;
+    private static final int MIN_HEIGHT = 540;
+    private static final String TITLE = "GunCraft Alpha 1.4 - WASD 空格 G生物 E物品栏 左键整堆 右键单个 Shift快速转移";
+
+    private int windowWidth = DEFAULT_WIDTH;
+    private int windowHeight = DEFAULT_HEIGHT;
+    /** 实际帧缓冲尺寸（随窗口缩放更新） */
+    private int framebufferWidth = DEFAULT_WIDTH;
+    private int framebufferHeight = DEFAULT_HEIGHT;
+    private double invMouseX;
+    private double invMouseY;
+    private double pauseMouseX;
+    private double pauseMouseY;
 
     private long window;
     private World world;
@@ -29,12 +42,11 @@ public class Game {
     private Inventory inventory;
     private GameUI gameUI;
     private boolean inventoryOpen = false;
+    private boolean pauseOpen = false;
+    private PauseScreen pauseScreen = PauseScreen.MENU;
     private boolean running = true;
     private double lastMouseX = Double.NaN;
     private double lastMouseY = Double.NaN;
-    /** 实际帧缓冲尺寸（随窗口缩放更新） */
-    private int framebufferWidth = WIDTH;
-    private int framebufferHeight = HEIGHT;
 
     public void run() {
         init();
@@ -42,8 +54,31 @@ public class Game {
         shutdown();
     }
 
+    /** 默认 1080p，不超过主显示器可用区域（留任务栏边距）。 */
+    private static int[] resolveWindowSize() {
+        int w = DEFAULT_WIDTH;
+        int h = DEFAULT_HEIGHT;
+        GLFWVidMode mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        if (mode != null) {
+            int maxW = mode.width();
+            int maxH = (int) (mode.height() * 0.92);
+            if (w > maxW || h > maxH) {
+                w = Math.min(w, maxW);
+                h = Math.min(h, maxH);
+                float aspect = 16f / 9f;
+                if (w / (float) h > aspect) w = Math.max(MIN_WIDTH, (int) (h * aspect));
+                else h = Math.max(MIN_HEIGHT, (int) (w / aspect));
+            }
+        }
+        return new int[]{
+                Math.max(MIN_WIDTH, w),
+                Math.max(MIN_HEIGHT, h)
+        };
+    }
+
     private void init() {
         if (!glfwInit()) throw new IllegalStateException("无法初始化 GLFW");
+        GameSettings.load();
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -52,13 +87,18 @@ public class Game {
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
-        window = glfwCreateWindow(WIDTH, HEIGHT, TITLE, NULL, NULL);
+        int[] size = resolveWindowSize();
+        windowWidth = size[0];
+        windowHeight = size[1];
+        window = glfwCreateWindow(windowWidth, windowHeight, TITLE, NULL, NULL);
         if (window == NULL) throw new IllegalStateException("无法创建窗口");
 
         try (MemoryStack stack = stackPush()) {
             IntBuffer pWidth = stack.mallocInt(1);
             IntBuffer pHeight = stack.mallocInt(1);
             glfwGetWindowSize(window, pWidth, pHeight);
+            windowWidth = Math.max(1, pWidth.get(0));
+            windowHeight = Math.max(1, pHeight.get(0));
             GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
             if (vidmode != null) {
                 glfwSetWindowPos(window,
@@ -81,6 +121,10 @@ public class Game {
             framebufferWidth = w;
             framebufferHeight = h;
         });
+        glfwSetWindowSizeCallback(window, (win, w, h) -> {
+            windowWidth = Math.max(1, w);
+            windowHeight = Math.max(1, h);
+        });
 
         GL.createCapabilities();
         glEnable(GL_DEPTH_TEST);
@@ -100,21 +144,21 @@ public class Game {
 
         glfwSetKeyCallback(window, (win, key, scancode, action, mods) -> {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
-                if (inventoryOpen) {
-                    inventoryOpen = false;
-                    lastMouseX = Double.NaN;
-                    lastMouseY = Double.NaN;
-                } else glfwSetWindowShouldClose(win, true);
-                updateCursorMode();
+                if (inventoryOpen) closeInventory();
+                else if (pauseOpen) {
+                    if (pauseScreen == PauseScreen.LANGUAGE) pauseScreen = PauseScreen.SETTINGS;
+                    else if (pauseScreen == PauseScreen.SETTINGS) pauseScreen = PauseScreen.MENU;
+                    else closePause();
+                } else openPause();
+                return;
             }
-            if (key == GLFW_KEY_E && action == GLFW_PRESS) {
-                inventoryOpen = !inventoryOpen;
-                if (!inventoryOpen) { lastMouseX = Double.NaN; lastMouseY = Double.NaN; }
-                updateCursorMode();
+            if (key == GLFW_KEY_E && action == GLFW_PRESS && !pauseOpen) {
+                if (inventoryOpen) closeInventory();
+                else openInventory();
             }
-            if (key >= GLFW_KEY_1 && key <= GLFW_KEY_9 && action == GLFW_PRESS)
+            if (key >= GLFW_KEY_1 && key <= GLFW_KEY_9 && action == GLFW_PRESS && !pauseOpen)
                 inventory.setSelectedHotbar(key - GLFW_KEY_1);
-            if (key == GLFW_KEY_G && action == GLFW_PRESS && !inventoryOpen) {
+            if (key == GLFW_KEY_G && action == GLFW_PRESS && !inventoryOpen && !pauseOpen) {
                 float dx = (float) -java.lang.Math.sin(player.getYaw());
                 float dz = (float) -java.lang.Math.cos(player.getYaw());
                 world.spawnCreature(
@@ -123,18 +167,38 @@ public class Game {
                         player.getZ() + dz * 2f
                 );
             }
-            if (action == GLFW_PRESS || action == GLFW_RELEASE)
-                player.key(key, action == GLFW_PRESS);
+            if (action == GLFW_PRESS || action == GLFW_RELEASE) {
+                if (!pauseOpen) player.key(key, action == GLFW_PRESS);
+                else if (action == GLFW_RELEASE) player.key(key, false);
+            }
         });
 
         glfwSetScrollCallback(window, (win, dx, dy) -> {
-            if (!inventoryOpen) inventory.scrollHotbar((int) dy);
+            inventory.scrollHotbar((int) dy);
         });
 
         Vector3f rayEye = new Vector3f();
         Vector3f rayDir = new Vector3f();
         glfwSetMouseButtonCallback(window, (win, button, action, mods) -> {
-            if (action != GLFW_PRESS || inventoryOpen) return;
+            if (pauseOpen) {
+                if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_LEFT && gameUI != null) {
+                    handlePauseClick();
+                }
+                return;
+            }
+            if (inventoryOpen) {
+                if (action == GLFW_PRESS && gameUI != null
+                        && (button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_RIGHT)) {
+                    int slot = gameUI.pickInventorySlot(toFramebufferX(invMouseX), toFramebufferY(invMouseY));
+                    if (slot >= 0) {
+                        boolean right = button == GLFW_MOUSE_BUTTON_RIGHT;
+                        boolean shift = (mods & GLFW_MOD_SHIFT) != 0;
+                        inventory.handleSlotClick(slot, right, shift);
+                    }
+                }
+                return;
+            }
+            if (action != GLFW_PRESS) return;
             player.getEyePosition(rayEye);
             player.getLookDirection(rayDir);
             ItemType held = inventory.getSelectedItemType();
@@ -161,7 +225,16 @@ public class Game {
         });
 
         glfwSetCursorPosCallback(window, (win, xpos, ypos) -> {
-            if (inventoryOpen) return;
+            if (inventoryOpen) {
+                invMouseX = xpos;
+                invMouseY = ypos;
+                return;
+            }
+            if (pauseOpen) {
+                pauseMouseX = xpos;
+                pauseMouseY = ypos;
+                return;
+            }
             if (Double.isNaN(lastMouseX)) { lastMouseX = xpos; lastMouseY = ypos; return; }
             double dx = xpos - lastMouseX;
             double dy = ypos - lastMouseY;
@@ -177,8 +250,86 @@ public class Game {
         updateCursorMode();
     }
 
+    private void openPause() {
+        pauseOpen = true;
+        pauseScreen = PauseScreen.MENU;
+        player.releaseAllKeys();
+        lastMouseX = Double.NaN;
+        lastMouseY = Double.NaN;
+        updateCursorMode();
+        try (MemoryStack stack = stackPush()) {
+            DoubleBuffer wx = stack.mallocDouble(1);
+            DoubleBuffer wy = stack.mallocDouble(1);
+            glfwGetCursorPos(window, wx, wy);
+            pauseMouseX = wx.get(0);
+            pauseMouseY = wy.get(0);
+        }
+    }
+
+    private void closePause() {
+        pauseOpen = false;
+        pauseScreen = PauseScreen.MENU;
+        lastMouseX = Double.NaN;
+        lastMouseY = Double.NaN;
+        updateCursorMode();
+    }
+
+    private void handlePauseClick() {
+        float mx = toFramebufferX(pauseMouseX);
+        float my = toFramebufferY(pauseMouseY);
+        int btn = gameUI.pickPauseButton(pauseScreen, mx, my);
+        if (pauseScreen == PauseScreen.MENU) {
+            if (btn == PauseScreenLayout.BTN_RESUME) closePause();
+            else if (btn == PauseScreenLayout.BTN_SETTINGS) pauseScreen = PauseScreen.SETTINGS;
+            else if (btn == PauseScreenLayout.BTN_LAUNCHER) quitToLauncher();
+        } else if (pauseScreen == PauseScreen.SETTINGS) {
+            if (btn == PauseScreenLayout.BTN_BACK) pauseScreen = PauseScreen.MENU;
+            else if (btn == PauseScreenLayout.BTN_LANGUAGE) pauseScreen = PauseScreen.LANGUAGE;
+        } else if (pauseScreen == PauseScreen.LANGUAGE) {
+            if (btn == PauseScreenLayout.BTN_BACK) pauseScreen = PauseScreen.SETTINGS;
+            else if (btn == PauseScreenLayout.BTN_LANG_ZH) GameSettings.setLanguage(GameLanguage.ZH);
+            else if (btn == PauseScreenLayout.BTN_LANG_EN) GameSettings.setLanguage(GameLanguage.EN);
+            else if (btn == PauseScreenLayout.BTN_LANG_REVERSE)
+                GameSettings.setLanguage(GameLanguage.REVERSE_ZH);
+        }
+    }
+
+    private void quitToLauncher() {
+        running = false;
+        glfwSetWindowShouldClose(window, true);
+    }
+
+    private void openInventory() {
+        inventoryOpen = true;
+        updateCursorMode();
+        try (MemoryStack stack = stackPush()) {
+            DoubleBuffer wx = stack.mallocDouble(1);
+            DoubleBuffer wy = stack.mallocDouble(1);
+            glfwGetCursorPos(window, wx, wy);
+            invMouseX = wx.get(0);
+            invMouseY = wy.get(0);
+        }
+    }
+
+    private void closeInventory() {
+        inventory.returnCursorStack();
+        inventoryOpen = false;
+        lastMouseX = Double.NaN;
+        lastMouseY = Double.NaN;
+        updateCursorMode();
+    }
+
+    private float toFramebufferX(double windowX) {
+        return (float) (windowX * framebufferWidth / (double) windowWidth);
+    }
+
+    private float toFramebufferY(double windowY) {
+        return (float) (windowY * framebufferHeight / (double) windowHeight);
+    }
+
     private void updateCursorMode() {
-        glfwSetInputMode(window, GLFW_CURSOR, inventoryOpen ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
+        boolean needMouse = inventoryOpen || pauseOpen;
+        glfwSetInputMode(window, GLFW_CURSOR, needMouse ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
     }
 
     private void loop() {
@@ -188,8 +339,10 @@ public class Game {
             float delta = (float) (now - lastTime);
             lastTime = now;
 
-            player.update(delta, world);
-            world.update(delta);
+            if (!pauseOpen) {
+                player.update(delta, world);
+                world.update(delta);
+            }
 
             glClearColor(0.4f, 0.6f, 0.9f, 1f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -200,9 +353,15 @@ public class Game {
             if (gameUI != null) {
                 gameUI.setFramebufferSize(framebufferWidth, framebufferHeight);
                 glClear(GL_DEPTH_BUFFER_BIT);
-                gameUI.drawHotbar(inventory);
-                if (!inventoryOpen) gameUI.drawCrosshair();
-                else gameUI.drawInventory(inventory);
+                if (inventoryOpen) {
+                    gameUI.drawInventory(inventory, toFramebufferX(invMouseX), toFramebufferY(invMouseY));
+                } else {
+                    gameUI.drawHotbar(inventory);
+                    if (!pauseOpen) gameUI.drawCrosshair();
+                    if (pauseOpen) {
+                        gameUI.drawPauseMenu(pauseScreen, toFramebufferX(pauseMouseX), toFramebufferY(pauseMouseY));
+                    }
+                }
             }
 
             glfwSwapBuffers(window);

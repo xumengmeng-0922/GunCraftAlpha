@@ -3,9 +3,19 @@
   "githubBranch": "main",
   "versions": [
     {
+      "id": "alpha-1.4",
+      "displayName": "Alpha 1.4",
+      "releaseDate": "2026-06-23",
+      "description": "Alpha 1.4：MC 风格 36 格物品栏、暂停菜单、设置→语言（中文 / English / 倒着的中文）、默认 1080p。\n\n操作：WASD 移动 · 空格跳跃 · Shift 蹲下 · G 生物 · E 物品栏 · Esc 暂停 · 左键/右键/Shift 整理物品 · 1-9/滚轮 快捷栏",
+      "releaseTag": "game-alpha-1.4",
+      "zipAssetName": "guncraft-game-alpha-1.4.zip",
+      "jarName": "guncraft-game-alpha-1.4.jar"
+    },
+    {
       "id": "alpha-1.3",
       "displayName": "Alpha 1.3",
-      "description": "版本列表与下载由云端清单决定。Fork 后改 githubRepo；默认从 GitHub Releases 按标签下载 zip。",
+      "releaseDate": "2026-06-22",
+      "description": "Alpha 1.3 测试版（旧版）。\n\n操作说明：WASD 移动 · 空格跳跃 · Shift 蹲下 · G 生成生物 · E 背包 · 左键射击/破坏 · 右键放泥土",
       "releaseTag": "game-alpha-1.3",
       "zipAssetName": "guncraft-game-alpha-1.3.zip",
       "jarName": "guncraft-game-alpha-1.3.jar"

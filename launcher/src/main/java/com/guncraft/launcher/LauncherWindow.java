@@ -1,6 +1,6 @@
 package com.guncraft.launcher;
 
-import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import com.guncraft.launcher.core.*;
 
 import javax.swing.*;
@@ -22,12 +22,21 @@ import java.util.Properties;
  */
 public class LauncherWindow extends JFrame {
 
-    public static final String LAUNCHER_VERSION = "Alpha 1.3";
+    public static final String LAUNCHER_VERSION = "Alpha 1.4";
 
-    private static final Color SIDEBAR = new Color(0x25, 0x25, 0x26);
-    private static final Color ACCENT = new Color(0x3B, 0x8E, 0xD0);
-    private static final Color ACCENT_HOVER = new Color(0x4A, 0x9E, 0xE0);
-    private static final Color CARD = new Color(0x2D, 0x2D, 0x30);
+    /** PCL 风格浅/深蓝配色 */
+    private static final Color BLUE_DEEP = new Color(0x2B, 0x6C, 0xAD);
+    private static final Color BLUE_DARK = new Color(0x3A, 0x7E, 0xC2);
+    private static final Color ACCENT = new Color(0x4A, 0x9E, 0xE0);
+    private static final Color ACCENT_HOVER = new Color(0x5B, 0xAD, 0xED);
+    private static final Color SIDEBAR = new Color(0xEB, 0xF4, 0xFC);
+    private static final Color MAIN_BG = new Color(0xD4, 0xE8, 0xF7);
+    private static final Color CARD = Color.WHITE;
+    private static final Color TEXT = new Color(0x1E, 0x4A, 0x72);
+    private static final Color TEXT_MUTED = new Color(0x5B, 0x7C, 0x99);
+    private static final Color BORDER = new Color(0xB8, 0xD4, 0xEA);
+    private static final Color NAV_IDLE = new Color(0xD8, 0xEB, 0xF9);
+    private static final Color NAV_HOVER = new Color(0xC2, 0xDE, 0xF4);
 
     private final CardLayout cards = new CardLayout();
     private final JPanel mainArea = new JPanel(cards);
@@ -36,6 +45,7 @@ public class LauncherWindow extends JFrame {
     private final JTextArea versionDetail = new JTextArea();
     private final JProgressBar downloadBar = new JProgressBar(0, 100);
     private final JLabel statusLabel = new JLabel(" ");
+    private final JLabel versionsReleaseSummary = new JLabel(" ");
     private final JTextField remoteUrlField = new JTextField(40);
     /** 主页：选择要启动的游戏版本（与「版本与下载」列表同步） */
     private JComboBox<GameVersion> homeVersionCombo;
@@ -57,8 +67,28 @@ public class LauncherWindow extends JFrame {
         applyManifest(ManifestLoader.loadEmbedded());
 
         JPanel root = new JPanel(new BorderLayout());
-        root.add(buildSidebar(), BorderLayout.WEST);
-        root.add(mainArea, BorderLayout.CENTER);
+        root.setBackground(MAIN_BG);
+
+        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 12));
+        topBar.setBackground(BLUE_DARK);
+        topBar.setPreferredSize(new Dimension(0, 52));
+        JLabel topTitle = new JLabel("GunCraft 启动器");
+        topTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+        topTitle.setForeground(Color.WHITE);
+        topBar.add(topTitle);
+        JLabel topVer = new JLabel(LAUNCHER_VERSION);
+        topVer.setForeground(new Color(0xD0, 0xE8, 0xFF));
+        topBar.add(topVer);
+        root.add(topBar, BorderLayout.NORTH);
+
+        JPanel body = new JPanel(new BorderLayout());
+        body.setOpaque(false);
+        body.add(buildSidebar(), BorderLayout.WEST);
+        body.add(mainArea, BorderLayout.CENTER);
+        root.add(body, BorderLayout.CENTER);
+
+        mainArea.setOpaque(false);
+        mainArea.setBackground(MAIN_BG);
 
         mainArea.add(buildHomePanel(), "home");
         mainArea.add(buildVersionsPanel(), "versions");
@@ -107,6 +137,30 @@ public class LauncherWindow extends JFrame {
             selectedForPlay = manifestVersions.get(0);
         syncHomeVersionCombo();
         refreshVersionDetail();
+        updateVersionsReleaseSummary();
+    }
+
+    private static String formatVersionListLabel(GameVersion gv) {
+        if (gv == null) return "";
+        String date = gv.releaseDateLabel();
+        if (date.isEmpty()) return gv.displayName + "  [" + gv.id + "]";
+        return gv.displayName + "  ·  " + date + "  [" + gv.id + "]";
+    }
+
+    private void updateVersionsReleaseSummary() {
+        if (versionsReleaseSummary == null) return;
+        StringBuilder sb = new StringBuilder("<html><body style='color:#5B7C99;font-size:12px'>");
+        boolean any = false;
+        for (GameVersion v : manifestVersions) {
+            String date = v.releaseDateLabel();
+            if (date.isEmpty()) continue;
+            if (any) sb.append("<br>");
+            sb.append(v.displayName).append(" 发布：").append(date);
+            any = true;
+        }
+        if (!any) sb.append("（清单未填写发布日期）");
+        sb.append("</body></html>");
+        versionsReleaseSummary.setText(sb.toString());
     }
 
     private void syncHomeVersionCombo() {
@@ -217,12 +271,12 @@ public class LauncherWindow extends JFrame {
 
         JLabel logo = new JLabel("GunCraft");
         logo.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 20));
-        logo.setForeground(Color.WHITE);
+        logo.setForeground(BLUE_DEEP);
         logo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel sub = new JLabel("启动器");
         sub.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        sub.setForeground(new Color(0x9A, 0x9A, 0x9A));
+        sub.setForeground(TEXT_MUTED);
         sub.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         bar.add(logo);
@@ -238,7 +292,7 @@ public class LauncherWindow extends JFrame {
 
         JLabel ver = new JLabel(LAUNCHER_VERSION);
         ver.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
-        ver.setForeground(new Color(0x80, 0x80, 0x80));
+        ver.setForeground(TEXT_MUTED);
         ver.setAlignmentX(Component.LEFT_ALIGNMENT);
         bar.add(ver);
 
@@ -250,19 +304,19 @@ public class LauncherWindow extends JFrame {
         b.setAlignmentX(Component.LEFT_ALIGNMENT);
         b.setMaximumSize(new Dimension(200, 36));
         b.setHorizontalAlignment(SwingConstants.LEFT);
-        b.setBackground(new Color(0x2D, 0x2D, 0x32));
-        b.setForeground(Color.WHITE);
+        b.setBackground(NAV_IDLE);
+        b.setForeground(BLUE_DEEP);
         b.setFocusPainted(false);
         b.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
         b.addActionListener(e -> action.run());
         b.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
-                b.setBackground(new Color(0x3E, 0x3E, 0x42));
+                b.setBackground(NAV_HOVER);
             }
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
-                b.setBackground(new Color(0x2D, 0x2D, 0x32));
+                b.setBackground(NAV_IDLE);
             }
         });
         return b;
@@ -270,7 +324,7 @@ public class LauncherWindow extends JFrame {
 
     private JPanel buildHomePanel() {
         JPanel p = new JPanel(new BorderLayout(0, 0));
-        p.setBackground(new Color(0x1E, 0x1E, 0x1E));
+        p.setBackground(MAIN_BG);
         p.setBorder(new EmptyBorder(40, 48, 48, 48));
 
         JPanel center = new JPanel();
@@ -279,27 +333,27 @@ public class LauncherWindow extends JFrame {
 
         JLabel title = new JLabel("准备开始游戏");
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 26));
-        title.setForeground(Color.WHITE);
+        title.setForeground(TEXT);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel hint = new JLabel("选择要启动的版本");
         hint.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
-        hint.setForeground(new Color(0xA8, 0xA8, 0xA8));
+        hint.setForeground(TEXT_MUTED);
         hint.setAlignmentX(Component.LEFT_ALIGNMENT);
         hint.setBorder(new EmptyBorder(12, 0, 4, 0));
 
         homeVersionCombo = new JComboBox<>();
         homeVersionCombo.setMaximumSize(new Dimension(420, 32));
         homeVersionCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        homeVersionCombo.setBackground(CARD);
-        homeVersionCombo.setForeground(Color.WHITE);
+        homeVersionCombo.setBackground(Color.WHITE);
+        homeVersionCombo.setForeground(TEXT);
         homeVersionCombo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                     boolean isSelected, boolean cellHasFocus) {
                 JLabel l = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 if (value instanceof GameVersion gv)
-                    l.setText(gv.displayName + "  [" + gv.id + "]");
+                    l.setText(formatVersionListLabel(gv));
                 return l;
             }
         });
@@ -313,7 +367,7 @@ public class LauncherWindow extends JFrame {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(CARD);
         card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0x40, 0x40, 0x45)),
+                BorderFactory.createLineBorder(BORDER),
                 new EmptyBorder(20, 24, 24, 24)));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.setMaximumSize(new Dimension(520, 260));
@@ -321,35 +375,37 @@ public class LauncherWindow extends JFrame {
         card.add(title);
         card.add(hint);
         card.add(homeVersionCombo);
-        JLabel oneVerHint = new JLabel("<html><span style='color:#666;font-size:11px'>当前仅一个版本；远程清单增加条目后，此处会出现多个选项。</span></html>");
+        JLabel oneVerHint = new JLabel("<html><span style='color:#5B7C99;font-size:11px'>当前仅一个版本；远程清单增加条目后，此处会出现多个选项。</span></html>");
         oneVerHint.setAlignmentX(Component.LEFT_ALIGNMENT);
         oneVerHint.setBorder(new EmptyBorder(6, 0, 0, 0));
         card.add(oneVerHint);
 
         JButton play = new JButton("启动游戏");
         play.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
-        play.setBackground(ACCENT);
-        play.setForeground(Color.WHITE);
+        play.setBackground(Color.WHITE);
+        play.setForeground(BLUE_DARK);
         play.setFocusPainted(false);
         play.setAlignmentX(Component.LEFT_ALIGNMENT);
-        play.setBorder(new EmptyBorder(24, 0, 0, 0));
+        play.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER),
+                new EmptyBorder(12, 24, 12, 24)));
         play.putClientProperty("JButton.buttonType", "roundRect");
         play.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) { play.setBackground(ACCENT_HOVER); }
+            public void mouseEntered(java.awt.event.MouseEvent e) { play.setBackground(new Color(0xF0, 0xF8, 0xFF)); }
             @Override
-            public void mouseExited(java.awt.event.MouseEvent e) { play.setBackground(ACCENT); }
+            public void mouseExited(java.awt.event.MouseEvent e) { play.setBackground(Color.WHITE); }
         });
         play.addActionListener(e -> launchSelectedGame());
         play.setPreferredSize(new Dimension(280, 48));
         play.setMaximumSize(new Dimension(400, 52));
+        card.add(Box.createVerticalStrut(16));
         card.add(play);
 
         center.add(card);
         center.add(Box.createVerticalStrut(16));
-        JLabel tips = new JLabel("<html><body style='width:420px;color:#888;font-size:12px'>"
-                + "若未安装版本，请先到「版本与下载」下载游戏包（清单中配置 zipUrl 或 GitHub Releases 字段即可）。<br>"
-                + "WASD 移动 · 空格跳跃 · Shift 蹲下 · G 生成生物 · E 背包 · 左键射击/破坏 · 右键放泥土"
+        JLabel tips = new JLabel("<html><body style='width:420px;color:#5B7C99;font-size:12px'>"
+                + "若未安装版本，请先到「版本与下载」下载游戏包。"
                 + "</body></html>");
         tips.setAlignmentX(Component.LEFT_ALIGNMENT);
         center.add(tips);
@@ -359,22 +415,33 @@ public class LauncherWindow extends JFrame {
     }
 
     private JPanel buildVersionsPanel() {
-        JPanel p = new JPanel(new BorderLayout(16, 8));
-        p.setBackground(new Color(0x1E, 0x1E, 0x1E));
-        p.setBorder(new EmptyBorder(24, 24, 24, 24));
+        JPanel p = new JPanel(new BorderLayout(12, 8));
+        p.setBackground(MAIN_BG);
+        p.setBorder(new EmptyBorder(20, 20, 20, 20));
+        statusLabel.setForeground(TEXT);
+
+        versionsReleaseSummary.setForeground(TEXT_MUTED);
+        versionsReleaseSummary.setBorder(new EmptyBorder(0, 0, 10, 0));
 
         versionList.setModel(versionModel);
         versionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         versionList.setBackground(CARD);
-        versionList.setForeground(Color.WHITE);
+        versionList.setForeground(TEXT);
+        versionList.setFixedCellHeight(40);
         versionList.setCellRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                     boolean isSelected, boolean cellHasFocus) {
                 JLabel l = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof GameVersion gv) {
-                    l.setText(gv.displayName + "  [" + gv.id + "]");
-                    l.setBorder(new EmptyBorder(6, 10, 6, 10));
+                if (value instanceof GameVersion gv)
+                    l.setText(formatVersionListLabel(gv));
+                l.setBorder(new EmptyBorder(4, 10, 4, 10));
+                if (isSelected) {
+                    l.setBackground(ACCENT);
+                    l.setForeground(Color.WHITE);
+                } else {
+                    l.setBackground(CARD);
+                    l.setForeground(TEXT);
                 }
                 return l;
             }
@@ -384,52 +451,72 @@ public class LauncherWindow extends JFrame {
         });
 
         JScrollPane listScroll = new JScrollPane(versionList);
-        listScroll.setPreferredSize(new Dimension(260, 0));
+        listScroll.setPreferredSize(new Dimension(200, 0));
+        listScroll.setMinimumSize(new Dimension(160, 120));
+        listScroll.getViewport().setBackground(CARD);
+        listScroll.setBorder(BorderFactory.createLineBorder(BORDER));
+
+        JPanel listCol = new JPanel(new BorderLayout());
+        listCol.setOpaque(false);
+        listCol.setPreferredSize(new Dimension(200, 0));
+        listCol.setMinimumSize(new Dimension(160, 0));
+        listCol.add(listScroll, BorderLayout.CENTER);
 
         versionDetail.setEditable(false);
         versionDetail.setLineWrap(true);
         versionDetail.setWrapStyleWord(true);
         versionDetail.setBackground(CARD);
-        versionDetail.setForeground(Color.WHITE);
+        versionDetail.setForeground(TEXT);
         versionDetail.setBorder(new EmptyBorder(12, 12, 12, 12));
+        versionDetail.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
 
-        JPanel right = new JPanel(new BorderLayout(8, 8));
-        right.setOpaque(false);
-        right.add(new JScrollPane(versionDetail), BorderLayout.CENTER);
+        JScrollPane detailScroll = new JScrollPane(versionDetail);
+        detailScroll.getViewport().setBackground(CARD);
+        detailScroll.setBorder(BorderFactory.createLineBorder(BORDER));
+        detailScroll.setMinimumSize(new Dimension(280, 120));
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel actions = new JPanel(new GridLayout(2, 2, 8, 8));
         actions.setOpaque(false);
-        JButton dl = styledActionButton("下载 / 更新", this::downloadSelected);
-        JButton localZip = styledActionButton("从本地 zip 安装…", this::installFromLocalZip);
-        JButton usePlay = styledActionButton("设为启动版本", this::setAsPlayVersion);
-        JButton refresh = styledActionButton("刷新版本列表", () -> refreshManifestFromNetworkAsync());
-        actions.add(dl);
-        actions.add(localZip);
-        actions.add(usePlay);
-        actions.add(refresh);
+        actions.setBorder(new EmptyBorder(0, 0, 8, 0));
+        actions.add(styledActionButton("下载 / 更新", this::downloadSelected));
+        actions.add(styledActionButton("从本地 zip 安装", this::installFromLocalZip));
+        actions.add(styledActionButton("设为启动版本", this::setAsPlayVersion));
+        actions.add(styledActionButton("刷新版本列表", () -> refreshManifestFromNetworkAsync()));
+
+        JPanel right = new JPanel(new BorderLayout(0, 8));
+        right.setOpaque(false);
+        right.setMinimumSize(new Dimension(320, 0));
         right.add(actions, BorderLayout.NORTH);
+        right.add(detailScroll, BorderLayout.CENTER);
 
         downloadBar.setStringPainted(true);
         downloadBar.setString("就绪");
         downloadBar.setVisible(false);
         right.add(downloadBar, BorderLayout.SOUTH);
 
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listScroll, right);
-        split.setResizeWeight(0.35);
-        split.setBorder(null);
-        split.setOpaque(false);
-
-        p.add(split, BorderLayout.CENTER);
-        p.add(statusLabel, BorderLayout.SOUTH);
+        p.add(listCol, BorderLayout.WEST);
+        p.add(right, BorderLayout.CENTER);
+        JPanel south = new JPanel(new BorderLayout());
+        south.setOpaque(false);
+        south.add(versionsReleaseSummary, BorderLayout.NORTH);
+        south.add(statusLabel, BorderLayout.SOUTH);
+        p.add(south, BorderLayout.SOUTH);
         return p;
     }
 
     private JButton styledActionButton(String text, Runnable r) {
         JButton b = new JButton(text);
-        b.setBackground(new Color(0x3A, 0x3A, 0x40));
+        b.setBackground(ACCENT);
         b.setForeground(Color.WHITE);
         b.setFocusPainted(false);
+        b.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         b.addActionListener(e -> r.run());
+        b.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) { b.setBackground(ACCENT_HOVER); }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) { b.setBackground(ACCENT); }
+        });
         return b;
     }
 
@@ -441,9 +528,12 @@ public class LauncherWindow extends JFrame {
         }
         String zip = ManifestUrls.resolvedZipUrl(v, activeManifest);
         if (zip.isEmpty())
-            zip = "（无网络地址时可点「从本地 zip 安装」，选打包好的 guncraft-game-alpha-1.3.zip）";
+            zip = "（无网络地址时可点「从本地 zip 安装」，选打包好的 guncraft-game-alpha-1.4.zip）";
         String inst = InstallPaths.isInstalled(v) ? "已安装" : "未安装";
-        versionDetail.setText(v.description + "\n\n下载地址:\n" + zip + "\n\n状态: " + inst + "\nJAR: " + v.resolvedJarName());
+        String dateLine = v.releaseDateLabel();
+        if (dateLine.isEmpty()) dateLine = "（未填写）";
+        versionDetail.setText(v.description + "\n\n发布时间: " + dateLine
+                + "\n\n下载地址:\n" + zip + "\n\n状态: " + inst + "\nJAR: " + v.resolvedJarName());
     }
 
     private void setAsPlayVersion() {
@@ -591,15 +681,14 @@ public class LauncherWindow extends JFrame {
             return;
         }
         Path jar = InstallPaths.jarPath(v);
-        String javaHome = System.getProperty("java.home");
-        String javaBin = javaHome + File.separator + "bin" + File.separator + "java.exe";
+        String javaBin = JavaLocator.resolveJavaExe();
 
         ProcessBuilder pb = new ProcessBuilder(javaBin, "-jar", jar.toAbsolutePath().toString());
         pb.directory(InstallPaths.installRoot(v).toFile());
         pb.inheritIO();
         try {
             pb.start();
-            dispose();
+            statusLabel.setText("游戏已启动：" + v.id + "（启动器保持打开）");
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "启动失败: " + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
         }
@@ -607,7 +696,7 @@ public class LauncherWindow extends JFrame {
 
     private JPanel buildSettingsPanel() {
         JPanel p = new JPanel(new BorderLayout());
-        p.setBackground(new Color(0x1E, 0x1E, 0x1E));
+        p.setBackground(MAIN_BG);
         p.setBorder(new EmptyBorder(32, 40, 40, 40));
 
         JPanel box = new JPanel();
@@ -616,12 +705,12 @@ public class LauncherWindow extends JFrame {
 
         JLabel t = new JLabel("设置");
         t.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
-        t.setForeground(Color.WHITE);
+        t.setForeground(TEXT);
         t.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel h = new JLabel("<html>远程版本清单 URL（HTTPS，JSON 格式与内嵌清单相同）<br>"
-                + "<span style='color:#888'>填写一次即可：之后每次启动会自动联网拉取最新版本列表，发布新版本只需更新服务器上的 JSON，玩家无需重装启动器。</span></html>");
-        h.setForeground(new Color(0xA0, 0xA0, 0xA0));
+                + "<span style='color:#5B7C99'>填写一次即可：之后每次启动会自动联网拉取最新版本列表，发布新版本只需更新服务器上的 JSON，玩家无需重装启动器。</span></html>");
+        h.setForeground(TEXT_MUTED);
         h.setAlignmentX(Component.LEFT_ALIGNMENT);
         h.setBorder(new EmptyBorder(16, 0, 8, 0));
 
@@ -637,12 +726,12 @@ public class LauncherWindow extends JFrame {
             JOptionPane.showMessageDialog(this, "已保存。" + statusLabel.getText(), "设置", JOptionPane.INFORMATION_MESSAGE);
         });
 
-        JLabel data = new JLabel("<html>数据根目录（设置等）:<br><code style='color:#6ab0ff'>" + InstallPaths.dataRoot()
-                + "</code><br><span style='color:#888;font-size:11px'>游戏解压位置：<code>…\\game\\&lt;版本 id&gt;</code></span></html>");
+        JLabel data = new JLabel("<html>数据根目录（设置等）:<br><code style='color:#2B6CAD'>" + InstallPaths.dataRoot()
+                + "</code><br><span style='color:#5B7C99;font-size:11px'>游戏解压位置：<code>…\\game\\&lt;版本 id&gt;</code></span></html>");
         data.setBorder(new EmptyBorder(24, 0, 0, 0));
         data.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel help = new JLabel("<html><body style='width:520px;color:#888;font-size:12px'>"
+        JLabel help = new JLabel("<html><body style='width:520px;color:#5B7C99;font-size:12px'>"
                 + "<b>云端清单</b>：将 <code>docs/versions-manifest.json</code> 推到仓库；若 JSON 里写了 <code>githubRepo</code>（如 <code>xumengmeng-0922/GunCraftAlpha</code>），"
                 + "启动器会自动拼 Raw 地址，一般不必再手填上方 URL。也可用完整 <code>zipUrl</code> 指向任意网盘直链。<br>"
                 + "<b>发新版</b>：在 GitHub Releases 上传 zip，清单里改 <code>releaseTag</code> / <code>zipAssetName</code> 或 <code>zipUrl</code> 即可。<br>"
@@ -655,7 +744,7 @@ public class LauncherWindow extends JFrame {
 
         JButton devImport = new JButton("开发者：从本机 game/target 导入…");
         devImport.setAlignmentX(Component.LEFT_ALIGNMENT);
-        devImport.setForeground(new Color(0x88, 0x88, 0x88));
+        devImport.setForeground(TEXT_MUTED);
         devImport.setBorder(new EmptyBorder(16, 0, 0, 0));
         devImport.addActionListener(e -> importSelected());
 
@@ -673,8 +762,11 @@ public class LauncherWindow extends JFrame {
 
     public static void applyLookAndFeel() {
         try {
-            FlatDarkLaf.setup();
-            UIManager.put("Button.arc", 8);
+            FlatLightLaf.setup();
+            UIManager.put("Button.arc", 10);
+            UIManager.put("Component.arc", 10);
+            UIManager.put("ProgressBar.arc", 10);
+            UIManager.put("TextComponent.arc", 8);
         } catch (Exception e) {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

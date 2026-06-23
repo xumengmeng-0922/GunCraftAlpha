@@ -3,7 +3,7 @@
 账号：**xumengmeng-0922**  
 仓库名：**GunCraftAlpha**（与清单里 `githubRepo` 一致）
 
-清单已配置：`docs/versions-manifest.json` → 从 Raw 拉版本列表，从 Releases 下载 `guncraft-game-alpha-1.3.zip`。
+清单已配置：`docs/versions-manifest.json` → 从 Raw 拉版本列表，从 Releases 下载 `guncraft-game-alpha-1.4.zip`。
 
 ---
 
@@ -49,16 +49,16 @@ git push -u origin main
 
 ## 第四步：打游戏 zip 并上传 Release
 
-1. 双击 **`打包游戏zip.bat`**（需 Maven），得到  
-   `game\target\guncraft-game-alpha-1.3.zip`
+1. 双击 **`pack-game-zip.cmd`** 或 **`打包游戏zip.bat`**（无需 Maven），得到  
+   `game\target\guncraft-game-alpha-1.4.zip` 与 `dist\guncraft-game-alpha-1.4.zip`
 2. GitHub 仓库 → **Releases** → **Draft a new release**
-3. **Choose a tag**：新建标签 **`game-alpha-1.3`**（必须与清单里 `releaseTag` 一致）
-4. 上传附件：**`guncraft-game-alpha-1.3.zip`**（文件名必须与 `zipAssetName` 一致）
+3. **Choose a tag**：新建标签 **`game-alpha-1.4`**（必须与清单里 `releaseTag` 一致）
+4. 上传附件：**`guncraft-game-alpha-1.4.zip`**（文件名必须与 `zipAssetName` 一致）
 5. Publish release
 
 下载直链会自动是：
 
-`https://github.com/xumengmeng-0922/GunCraftAlpha/releases/download/game-alpha-1.3/guncraft-game-alpha-1.3.zip`
+`https://github.com/xumengmeng-0922/GunCraftAlpha/releases/download/game-alpha-1.4/guncraft-game-alpha-1.4.zip`
 
 ---
 
@@ -80,10 +80,11 @@ https://raw.githubusercontent.com/xumengmeng-0922/GunCraftAlpha/main/docs/versio
 
 ---
 
-## 以后发新版（例如 Alpha 1.4）
+## 以后发新版（例如 Alpha 1.5）
 
-1. 改 `pom.xml` / 内嵌清单里的版本号  
-2. `打包游戏zip.bat` → 新 zip  
-3. 新 Release 标签 + 上传 zip  
-4. 只改 **`docs/versions-manifest.json`** 里版本条目，推送到 `main`  
-5. 玩家启动器里点 **刷新版本列表**（一般不用重装启动器）
+1. 改根目录 / `game` / `launcher` 的 `pom.xml` 与 `scripts\build-game-zip.bat` 里的 `VER=alpha-1.x`  
+2. 更新 `docs/versions-manifest.json` 与 `launcher/src/main/resources/versions-manifest.json`  
+3. `pack-game-zip.cmd` → 新 zip  
+4. GitHub 新 Release 标签 + 上传 zip（`releaseTag` / `zipAssetName` 与清单一致）  
+5. `git push` 推送清单到 `main`  
+6. 玩家启动器里点 **刷新版本列表**（一般不用重装启动器）

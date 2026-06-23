@@ -12,7 +12,7 @@ import static org.lwjgl.opengl.GL30.*;
  * 用 AWT 将字符串渲染为纹理，用于 HUD 显示物品名等。
  */
 public class TextRenderer {
-    private static final int FONT_SIZE = 24;
+    private static final int FONT_SIZE = 28;
     /** 优先中文，否则用系统默认无衬线字体，保证各系统都能显示。 */
     private static final Font FONT = new Font(Font.SANS_SERIF, Font.PLAIN, FONT_SIZE);
     private final Map<String, Integer> cache = new HashMap<>();
@@ -55,7 +55,8 @@ public class TextRenderer {
         img = new BufferedImage(Math.max(1, w), Math.max(1, h), BufferedImage.TYPE_INT_ARGB);
         g = img.createGraphics();
         g.setFont(FONT);
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
         g.setColor(Color.WHITE);
         g.drawString(text, 2, fm.getAscent() + 2);
         g.dispose();
